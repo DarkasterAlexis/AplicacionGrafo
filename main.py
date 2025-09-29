@@ -7,6 +7,7 @@ import csv
 import json
 
 botones = []
+boton_activo = None
 
 def elegir_inicio(grafo, preferencia='A'):
     """Devuelve un nodo de inicio: preferencia si existe, si no el primer nodo disponible."""
@@ -89,25 +90,20 @@ def mostrar_prim():
     actualizar_texto(resultado)
     dibujar_grafo(p_frame, grafo_server, mst=mst, titulo="Resultados con el \nAlgoritmo PRIM" )
     
-def resaltar_botondfs(btn_active):
+def resaltar_boton_activo(btn_active,color):
+    global boton_activo
     for btn in botones:
-        btn.config(bg="lightblue",fg="blue")
-    btn_active.config(bg="blue", fg="yellow")
+        btn.config(highlightthickness=0)
+    btn_active.config(highlightthickness=4,highlightbackground=color,highlightcolor=color)
+    boton_activo = btn_active
 
-def resaltar_botonbfs(btn_active):
-    for btn in botones:
-        btn.config(bg="lightgreen",fg="blue")
-    btn_active.config(bg="red", fg="yellow")
-
-def resaltar_botonkruskal(btn_active):
-    for btn in botones:
-        btn.config(bg="lightcoral",fg="blue")
-    btn_active.config(bg="green", fg="yellow")
+def resaltar_borde(event):
+    if event.widget != boton_activo:
+        event.widget.config(highlightthickness=2, highlightbackground="cyan",highlightcolor="cyan")
     
-def resaltar_botonprim(btn_active):
-    for btn in botones:
-        btn.config(bg="lightcoral",fg="blue")
-    btn_active.config(bg="darkgreen", fg="navy")
+def quitar_resaltado(event):
+    if event.widget != boton_activo:
+        event.widget.config(highlightthickness=0)
 
 def actualizar_texto(texto):
     salida_texto.config(state="normal")
@@ -123,7 +119,7 @@ ventana = tk.Tk()
 ventana.title("ANALISIS DE CONECTIVIDAD DE LA RED DE SERVIDORES ")
 ventana.geometry("500x400")
 ventana.state("zoomed")
-ventana.configure(bg="darkblue")
+ventana.configure(bg="black")
 
 def centro_ventana(top):
     top.update_idletasks()
@@ -214,60 +210,68 @@ def exportar_texto_actual():
     tk.Button(top, text="CSV", command=guardar_csv, font=("Bauhaus 93", 13,"bold"),width=10,height=2, bg="orange", fg="darkblue").pack(pady=5)
     tk.Button(top, text="JSON", command=guardar_json, font=("Bauhaus 93", 13,"bold"),width=10,height=2, bg="purple", fg="white").pack(pady=5)
     
-frame_izq = tk.Frame(ventana,bg="darkblue")
-frame_izq.pack(side=tk.LEFT,fill=tk.Y,padx=10 , pady=10)
+frame_izq = tk.Frame(ventana,bg="black",highlightthickness=0,borderwidth=0)
+frame_izq.pack(side=tk.LEFT,fill=tk.Y,expand=False)
 frame_izq.grid_rowconfigure(0, weight=1)
 frame_izq.grid_rowconfigure(2, weight=1)
-frame_der = tk.Frame(ventana,bg="darkblue")
-frame_der.pack(side=tk.RIGHT,fill=tk.Y,padx=10 , pady=10)
+frame_der = tk.Frame(ventana,bg="black",highlightthickness=0,borderwidth=0)
+frame_der.pack(side=tk.RIGHT,fill=tk.Y,expand=False)
 frame_der.grid_rowconfigure(0, weight=1)
 frame_der.grid_rowconfigure(2, weight=1)
 
-conten_izq = tk.Frame(frame_izq, bg="darkblue")
+conten_izq = tk.Frame(frame_izq, bg="black")
 conten_izq.grid(row=1, column=0)
-conten_der = tk.Frame(frame_der, bg="darkblue")
+conten_der = tk.Frame(frame_der, bg="black")
 conten_der.grid(row=1, column=0)
+
 
 btn_dfs = tk.Button(
     conten_izq, text="Recorrer RED",
-    command=lambda: [mostrar_dfs(),resaltar_botondfs(btn_dfs)], 
-    width=30,height=3, bg="lightblue",fg="blue",
-    activebackground="blue", activeforeground="yellow",
+    relief="solid",bd=2,
+    highlightthickness=0,highlightbackground="black",
+    command=lambda: [mostrar_dfs(),resaltar_boton_activo(btn_dfs,"blue")], 
+    width=30,height=3, bg="black",fg="lightblue",
     font=("Bauhaus 93",18,"bold"))
 btn_bfs = tk.Button(
     conten_izq, text="Calcular distancia minimas",
-    command=lambda: [mostrar_bfs(),resaltar_botonbfs(btn_bfs)], 
-    width=30,height=3, bg="lightgreen",fg="blue",
-    activebackground="red", activeforeground="yellow",
-    font=("Bauhaus 93",18,"bold"))
+    relief="solid",bd=2,
+    command=lambda: [mostrar_bfs(),resaltar_boton_activo(btn_bfs,"red")], 
+    width=30,height=3, bg="black",fg="lightblue",    font=("Bauhaus 93",18,"bold"),
+    highlightthickness=0,highlightbackground="black")
 btn_kruskal = tk.Button(
-    conten_izq, text="Árbol de Expansión minima",    
-    command=lambda: [mostrar_kruskal(),resaltar_botonkruskal(btn_kruskal)], 
-    width=30,height=3, bg="lightcoral",fg="blue",
-    activebackground="green", activeforeground="yellow",    
-    font=("Bauhaus 93",18,"bold"))
+    conten_izq, text="Árbol de Expansión minima",
+    relief="solid",bd=2,    
+    command=lambda: [mostrar_kruskal(),resaltar_boton_activo(btn_kruskal,"yellow")], 
+    width=30,height=3, bg="black",fg="lightblue",    
+    font=("Bauhaus 93",18,"bold"),
+    highlightthickness=0,highlightbackground="black")
 btn_prim = tk.Button(
     conten_izq, text="Comparar con Prim",
-    command=lambda: [mostrar_prim(),resaltar_botonprim(btn_prim)],
-    width=30,height=3,bg="palegreen",fg="navy",
-    activebackground="darkgreen",activeforeground="orange",
-    font=("Bauhaus 93",18,"bold"))
+    relief="solid",bd=2,
+    command=lambda: [mostrar_prim(),resaltar_boton_activo(btn_prim,"green")],
+    width=30,height=3,bg="black",fg="lightblue",
+    font=("Bauhaus 93",18,"bold"),
+    highlightthickness=0,highlightbackground="black")
 btn_salida = tk.Button(
-    conten_der, text="EXIT",command=saliPprograma,
-    width=30,height=3, bg="red",fg="yellow",
-    activebackground="yellow", activeforeground="red",
-    font=("Bauhaus 93",18,"bold"))
+    conten_der, text="EXIT",
+    relief="solid",bd=2,
+    command=saliPprograma,
+    width=30,height=3, bg="black",fg="lightblue",   font=("Bauhaus 93",18,"bold"),
+    highlightthickness=0,highlightbackground="black")
 btn_eliminar = tk.Button(
     conten_der, text="Eliminar Nodo",
-    command=elimina_nodo, width=30,height=3,bg="yellow",fg="black",
-    activebackground="darkorange",activeforeground="white",
-    font=("Bauhaus 93",18,"bold"))
+    relief="solid",bd=2,
+    command=elimina_nodo,
+    width=30,height=3,bg="black",fg="lightblue",
+    font=("Bauhaus 93",18,"bold"),
+    highlightthickness=0,highlightbackground="black")
 btn_exportar = tk.Button(
     conten_der, text="Exportar Resultados",
-    command=exportar_texto_actual, width=30,height=3,bg="darkslategray",fg="white",
-    activebackground="slategray",activeforeground="black",
-    font=("Bauhaus 93",18,"bold"))
-
+    relief="solid",bd=2,
+    command=lambda: [exportar_texto_actual(),resaltar_boton_activo(btn_dfs,"blue")], 
+    width=30,height=3,bg="black",fg="lightblue",
+    font=("Bauhaus 93",18,"bold"),
+    highlightthickness=0,highlightbackground="black")
 
 btn_dfs.pack(pady=0)
 btn_bfs.pack(pady=0)
@@ -277,15 +281,19 @@ btn_eliminar.pack(pady=0)
 btn_prim.pack(pady=0)
 btn_salida.pack(pady=0)
 
-botones=[btn_dfs,btn_bfs,btn_kruskal,btn_prim]
+botones=[btn_dfs,btn_bfs,btn_kruskal,btn_prim,btn_eliminar,btn_exportar,btn_salida]
+
+for btn in botones:
+    btn.bind("<Enter>", resaltar_borde)
+    btn.bind("<Leave>", quitar_resaltado)
 
 salida_texto = tk.Text(
     ventana, wrap="word", height=5, width=70, state="disabled", 
-    font=("Bookman Old Style",18),bg="#FFD580",fg="darkblue",
+    font=("Bookman Old Style",18),bg="gray25",fg="darkblue",
     relief="flat", borderwidth=2)
 salida_texto.pack(pady=10)
 
-p_frame = tk.Frame(ventana, bg="darkblue")
+p_frame = tk.Frame(ventana, bg="black",highlightthickness=0,borderwidth=0)
 p_frame.pack(fill="both", expand=True)
 
 ventana.mainloop()
