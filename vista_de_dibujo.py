@@ -5,16 +5,15 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 def dibujar_grafo(p_frame, grafo, camino=None, mst=None, titulo="Grafo de Servidores"):
     for widget in p_frame.winfo_children():
         widget.destroy()
-    
-    ancho = p_frame.winfo_width() or 800
-    alto = p_frame.winfo_height() or 800
-    
-    figw, figh = ancho/100, alto/100
-    fig, ax = plt.subplots(figsize=(figw,figh))
+
+    # --- Tamaño fijo grande (en pulgadas para matplotlib) ---
+    figw, figh = 10, 8   # 10x8 pulgadas ~ buen tamaño
+
+    fig, ax = plt.subplots(figsize=(figw, figh))
     fig.patch.set_facecolor("black")
     ax.set_facecolor("skyblue")
+
     G = nx.Graph()
-    
     for u in grafo:
         for v, w in grafo[u].items():
             G.add_edge(u, v, weight=w)
@@ -34,14 +33,11 @@ def dibujar_grafo(p_frame, grafo, camino=None, mst=None, titulo="Grafo de Servid
     if mst:
         edges_mst = [(u, v) for u, v, _ in mst]
         nx.draw_networkx_edges(G, pos, edgelist=edges_mst, edge_color="lime", width=4, ax=ax)
-        
-    ax.set_title(titulo, fontweight="bold", fontsize="19", color="orange")
+
+    ax.set_title(titulo, fontweight="bold", fontsize=19, color="orange")
     ax.axis("off")
-    
-    for widget in p_frame.winfo_children():
-        widget.destroy()
-        
-    cv = FigureCanvasTkAgg(fig,master=p_frame)
+
+    cv = FigureCanvasTkAgg(fig, master=p_frame)
     cv.draw()
-    cv.get_tk_widget().pack(fill="both",expand=True)
+    cv.get_tk_widget().pack(fill="both", expand=True)
     plt.close(fig)

@@ -6,6 +6,15 @@ from vista_de_dibujo import dibujar_grafo
 from tkinter import filedialog,simpledialog
 import csv, json
 from tkinter import font as tkfont
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "1"
+import pygame
+
+#Inicializar el mezclador de sonidos
+pygame.mixer.init()
+
+sonido_hover = pygame.mixer.Sound("sounds/hover.wav")
+sonido_click = pygame.mixer.Sound("sounds/click.wav")
 
 # ---------------- GLOBALS ----------------
 botones = []
@@ -287,22 +296,49 @@ def crear_boton_octagonal(parent, text, command=None,bg="black", fg="lightblue",
     polygon = canvas.create_polygon(points, outline=border_color, fill=bg, width=2)
 
     # Texto centrado
-    canvas.create_text(width // 2, height // 2, text=text, fill=fg, font=fuente)
+    text_id = canvas.create_text(width // 2, height // 2, text=text, fill=fg, font=fuente)
+
+    canvas.text_id = text_id
+    canvas.default_fg = fg
+    canvas.active_color = active_color
 
     # Hover
     def on_enter(event):
         canvas.itemconfig(polygon, outline=active_color, width=4)
+        sonido_hover.play()
     def on_leave(event):
-        canvas.itemconfig(polygon, outline=border_color, width=2)
+        if boton_activo != canvas:
+            canvas.itemconfig(polygon, outline=border_color, width=2)
+            canvas.itemconfig(text_id,fill=fg)
     def on_click(event):
+        sonido_click.play()
         if command:
             command()
+        marcar_boton_activo(canvas)
 
     canvas.bind("<Enter>", on_enter)
     canvas.bind("<Leave>", on_leave)
     canvas.bind("<Button-1>", on_click)
 
     return canvas
+
+def marcar_boton_activo(btn):
+    global boton_activo
+    for b in botones:
+        try:
+            if b != btn:  # solo resetear los que no son el actual
+                b.itemconfig(b.text_id, fill=b.default_fg)
+                b.itemconfig(b.find_all()[0], outline="black", width=2)  # resetear borde
+        except tk.TclError:
+            pass  # botón ya destruido
+    try:
+        # Marcar el activo
+        btn.itemconfig(btn.text_id, fill=btn.active_color)
+        btn.itemconfig(btn.find_all()[0], outline=btn.active_color, width=4)
+        boton_activo = btn
+    except tk.TclError:
+        pass #boton destruido
+   
 
 def actualizar_texto_octagonal(canvas, texto, fg="orange",
                                font=("Bookman Old Style", 18)):
@@ -457,7 +493,7 @@ botones = [btn_dfs, btn_bfs, btn_kruskal, btn_prim, btn_exportar, btn_eliminar, 
 # ---------------- AREA DE SALIDA OCTOGONAL ----------------
 # Crear área octagonal
 salida_canvas = crear_texto_octagonal(
-    ventana, width=900, height=250,
+    ventana, width=900, height=220,
     border_color="orange", borde_ancho=6,
     bg_octagono="black", fg="orange"
 )
