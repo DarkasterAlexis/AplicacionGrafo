@@ -1,30 +1,31 @@
 import tkinter as tk
-from algoritmos import dfs, bfs, kruskal,prim
+from tkinter import ttk
+from algoritmos import dfs, bfs, kruskal, prim
 from cod_grafo import grafo_server
 from vista_de_dibujo import dibujar_grafo
-from tkinter import filedialog
-import csv
-import json
+from tkinter import filedialog,simpledialog
+import csv, json
+from tkinter import font as tkfont
 
+# ---------------- GLOBALS ----------------
 botones = []
 boton_activo = None
+ultimo_resultado = {}
 
+# ---------------- FUNCIONES AUXILIARES ----------------
 def elegir_inicio(grafo, preferencia='A'):
-    """Devuelve un nodo de inicio: preferencia si existe, si no el primer nodo disponible."""
     if not grafo:
         return None
     if preferencia in grafo:
         return preferencia
-    return next(iter(grafo))  # primer nodo según orden de inserción
+    return next(iter(grafo))
 
 def elegir_destino_bfs(grafo, preferencia='G', inicio=None):
-    """Devuelve un destino para BFS: preferencia si existe, si no el último nodo distinto del inicio."""
     if not grafo:
         return None
     if preferencia in grafo:
         return preferencia
     keys = list(grafo.keys())
-    # intenta devolver el último distinto del inicio
     for k in reversed(keys):
         if k != inicio:
             return k
@@ -36,11 +37,8 @@ def mostrar_dfs():
         actualizar_texto("El grafo está vacío, no se puede ejecutar DFS.")
         return
     inicio = elegir_inicio(grafo_server, 'A')
-    if inicio is None:
-        actualizar_texto("No hay nodos en el grafo para ejecutar DFS.")
-        return
     recorrido = dfs(grafo_server, inicio)
-    ultimo_resultado = {"DFS":recorrido,"inicio":inicio}
+    ultimo_resultado = {"DFS": recorrido, "inicio": inicio}
     actualizar_texto(f"DFS desde {inicio}: {recorrido}\n¿Existe camino {inicio}→G?: {'G' in recorrido}")
     dibujar_grafo(p_frame, grafo_server, titulo="Resultados con el\nAlgoritmo DFS")
 
@@ -51,10 +49,6 @@ def mostrar_bfs():
         return
     inicio = elegir_inicio(grafo_server, 'A')
     destino = elegir_destino_bfs(grafo_server, 'G', inicio)
-    if inicio is None or destino is None:
-        actualizar_texto("No hay nodos suficientes para ejecutar BFS.")
-        return
-    # si inicio == destino, camino trivial
     if inicio == destino:
         camino = [inicio]
     else:
@@ -70,7 +64,7 @@ def mostrar_bfs():
 def mostrar_kruskal():
     global ultimo_resultado
     mst, costo = kruskal(grafo_server)
-    ultimo_resultado = {"Kruskal":mst,"Costo":costo}
+    ultimo_resultado = {"Kruskal": mst, "Costo": costo}
     resultado = f"MST: {mst}\nCosto mínimo: {costo}"
     actualizar_texto(resultado)
     dibujar_grafo(p_frame, grafo_server, mst=mst, titulo="Resultados con el \nAlgoritmo KRUSKAL" )
@@ -81,219 +75,398 @@ def mostrar_prim():
         actualizar_texto("El grafo está vacío, no se puede ejecutar Prim.")
         return
     inicio = elegir_inicio(grafo_server, 'A')
-    if inicio is None:
-        actualizar_texto("No hay nodos en el grafo para ejecutar Prim.")
-        return
-    mst, costo=prim(grafo_server,inicio)
-    ultimo_resultado = {"Prim":mst,"Costo":costo,"inicio":inicio}
-    resultado = F"Prim desde {inicio}: {mst}\nCosto mínimo: {costo}"
+    mst, costo = prim(grafo_server, inicio)
+    ultimo_resultado = {"Prim": mst, "Costo": costo, "inicio": inicio}
+    resultado = f"Prim desde {inicio}: {mst}\nCosto mínimo: {costo}"
     actualizar_texto(resultado)
     dibujar_grafo(p_frame, grafo_server, mst=mst, titulo="Resultados con el \nAlgoritmo PRIM" )
-    
-def resaltar_boton_activo(btn_active,color):
-    global boton_activo
-    for btn in botones:
-        btn.config(highlightthickness=0)
-    btn_active.config(highlightthickness=4,highlightbackground=color,highlightcolor=color)
-    boton_activo = btn_active
 
-def resaltar_borde(event):
-    if event.widget != boton_activo:
-        event.widget.config(highlightthickness=2, highlightbackground="cyan",highlightcolor="cyan")
-    
-def quitar_resaltado(event):
-    if event.widget != boton_activo:
-        event.widget.config(highlightthickness=0)
+def actualizar_texto(texto, fg="orange"):
+    salida_canvas.delete("texto_resultado")
+    salida_canvas.create_text(
+        salida_canvas.winfo_width() // 2,     # centro X
+        salida_canvas.winfo_height() // 2,    # centro Y
+        text=texto,
+        fill=fg,
+        font=("Bookman Old Style", 18),
+        width=salida_canvas.winfo_width() - 80,  # ajusta para que el texto no se salga
+        tags="texto_resultado",
+        anchor="center",
+        justify="center"
+    )
 
-def actualizar_texto(texto):
-    salida_texto.config(state="normal")
-    salida_texto.delete(1.0, tk.END)
-    salida_texto.insert(tk.END, texto)
-    salida_texto.config(state="disabled")
-    
 def saliPprograma():
     ventana.quit()
     ventana.destroy()
 
-ventana = tk.Tk()
-ventana.title("ANALISIS DE CONECTIVIDAD DE LA RED DE SERVIDORES ")
-ventana.geometry("500x400")
-ventana.state("zoomed")
-ventana.configure(bg="black")
-
-def centro_ventana(top):
-    top.update_idletasks()
-    w = top.winfo_width()
-    h = top.winfo_height()
-    ws = top.winfo_screenwidth()
-    hs = top.winfo_screenheight()
-    x = (ws // 2)-(w // 2)
-    y = (hs // 2)-(h // 2)
-    top.geometry(f"{w}x{h}+{x}+{y}")
+def centra_ventana(win, ancho=400, alto=200):
+    win.update_idletasks()
+    ancho_ventana = ancho
+    alto_ventana = alto
+    x = (win.winfo_screenwidth() // 2) - (ancho_ventana // 2)
+    y = (win.winfo_screenheight() // 2) - (alto_ventana // 2)
+    win.geometry(f"{ancho_ventana}x{alto_ventana}+{x}+{y}")
 
 def elimina_nodo():
-    top = tk.Toplevel(ventana, bg="darkviolet")
-    top.title("Eliminar Nodo")  
-    tk.Label(top, text="Ingrese el Nodo a eliminar:  ",font=("Arial",12),
-             bg="violet",fg="#0B3D91").pack(pady=5)
-    entry = tk.Entry(top,font=("Arial",12),bg="yellow",
-                     fg="darkblue",insertbackground="red",  
-                     highlightthickness=2,highlightbackground="gray", 
-                     highlightcolor="green")
-    entry.pack(pady=10)
-     
-    def confirmar():
-        nodo = entry.get().strip()
+    global grafo_server
+
+    if not grafo_server:
+        actualizar_texto("El grafo está vacío, no se puede eliminar un nodo.")
+        return
+
+    def confirmar(event=None):
+        nodo = entry.get()
         if nodo in grafo_server:
-            grafo_server.pop(nodo)
-            for vecin in grafo_server.values():
-                if nodo in vecin:
-                    vecin.pop(nodo)
-            actualizar_texto(f"El nodo {nodo} se ha eliminado correctamente.")
-            dibujar_grafo(p_frame, grafo_server, titulo=f"Grafo actualizado (sin {nodo})")
-            top.destroy()
-        else: 
-            actualizar_texto(f"El nodo '{nodo}' no existe en el grafo. ")
-            top.destroy()
-    btn_confirmar= tk.Button(top, text="Confirmar", command=confirmar, bg="red",fg="white",
-              font=("Arial", 10, "bold"),width=12,height=4 )
-    btn_confirmar.pack(pady=10,ipadx=10,ipady=5)
+            del grafo_server[nodo]
+            for k in grafo_server:
+                if nodo in grafo_server[k]:
+                    del grafo_server[k][nodo]
+            actualizar_texto(f"Nodo '{nodo}' eliminado correctamente.")
+            dibujar_grafo(p_frame, grafo_server, titulo="Grafo actualizado")
+        else:
+            actualizar_texto(f"El nodo '{nodo}' no existe en el grafo.")
+        ventana_popup.destroy()
+
+    def cancelar():
+        ventana_popup.destroy()
+
+    ventana_popup = tk.Toplevel(ventana)
+    ventana_popup.title("Eliminar Nodo")
+    ventana_popup.configure(bg="#2c2f33")  # Color de fondo
+    ventana_popup.geometry("400x200")  # Tamaño de ventana
+    ventana_popup.resizable(False, False)
     
-    top.bind("<Return>",lambda e: btn_confirmar.invoke())
-    entry.bind("<Return>",lambda e: btn_confirmar.invoke())
-    entry.focus()
-    top.geometry("300x130")
-    top.resizable(False,False)
-    centro_ventana(top)
+    centra_ventana(ventana_popup,ancho=400,alto=200)
+
+    label = tk.Label(ventana_popup, text="Ingrese el nodo a eliminar:", 
+                     bg="#2c2f33", fg="white", font=("Arial", 14))
+    label.pack(pady=20)
+
+    entry = tk.Entry(ventana_popup, font=("Arial", 14), width=20)
+    entry.pack(pady=10)
+    entry.focus_set()
+
+    frame_botones = tk.Frame(ventana_popup, bg="#2c2f33")
+    frame_botones.pack(pady=10)
+
+    btn_ok = tk.Button(frame_botones, text="OK", bg="#4CAF50", fg="white", 
+                       font=("Arial", 12, "bold"), width=10, command=confirmar)
+    btn_ok.pack(side=tk.LEFT, padx=10)
+
+    btn_cancelar = tk.Button(frame_botones, text="Cancelar", bg="#f44336", fg="white", 
+                             font=("Arial", 12, "bold"), width=10, command=cancelar)
+    btn_cancelar.pack(side=tk.LEFT, padx=10)
     
+    ventana_popup.bind("<Return>",confirmar)
+
+    ventana_popup.transient(ventana)  # Para que la ventana sea modal
+    ventana_popup.grab_set()
+    ventana.wait_window(ventana_popup)
+
+
 def exportar_texto_actual():
-    global ultimo_resultado
-    try:
-        if not ultimo_resultado:
-            actualizar_texto("No hay resultados para exportar.")
-            return
-    except NameError:
+    if not ultimo_resultado:
         actualizar_texto("No hay resultados para exportar.")
         return
 
-    # Ventana emergente para elegir formato
-    top = tk.Toplevel(ventana,bg="maroon")
-    top.title("Elegir formato")
-    top.geometry("300x180")
-    top.resizable(False, False)
-    top.lift()
-    top.attributes("-topmost", True)
-    top.focus_force()
-    top.attributes("-topmost", False)
-    centro_ventana(top)
+    def exportar(formato):
+        filename = filedialog.asksaveasfilename(
+            defaultextension=f".{formato}",
+            filetypes=[(f"{formato.upper()} files", f"*.{formato}"), ("All files", "*.*")],
+        )
+        if not filename:
+            return
 
-    tk.Label(top, text="Seleccione el formato de exportación:", font=("Arial", 12,"bold"),bg="lightcoral").pack(pady=10)
+        try:
+            if formato == "csv":
+                with open(filename, "w", newline="", encoding="utf-8") as csvfile:
+                    writer = csv.writer(csvfile)
+                    for clave, valor in ultimo_resultado.items():
+                        writer.writerow([clave, valor])
+            elif formato == "json":
+                with open(filename, "w", encoding="utf-8") as jsonfile:
+                    json.dump(ultimo_resultado, jsonfile, ensure_ascii=False, indent=4)
+            actualizar_texto(f"Resultados exportados correctamente a {filename}")
+        except Exception as e:
+            actualizar_texto(f"Error al exportar: {str(e)}")
+        ventana_popup.destroy()
 
-    def guardar_csv():
-        ruta = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
-        if ruta:
-            with open(ruta, mode="w", newline="", encoding="utf-8") as file:
-                writer = csv.writer(file)
-                for k, v in ultimo_resultado.items():
-                    writer.writerow([k, v])
-            actualizar_texto(f"Resultados exportados a CSV: {ruta}")
-        top.destroy()
-
-    def guardar_json():
-        ruta = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
-        if ruta:
-            with open(ruta, "w", encoding="utf-8") as file:
-                json.dump(ultimo_resultado, file, indent=4)
-            actualizar_texto(f"Resultados exportados a JSON: {ruta}")
-        top.destroy()
-
-    tk.Button(top, text="CSV", command=guardar_csv, font=("Bauhaus 93", 13,"bold"),width=10,height=2, bg="orange", fg="darkblue").pack(pady=5)
-    tk.Button(top, text="JSON", command=guardar_json, font=("Bauhaus 93", 13,"bold"),width=10,height=2, bg="purple", fg="white").pack(pady=5)
+    def cancelar():
+        ventana_popup.destroy()
+        
+    def on_enter(event,color):
+        event.widget['background'] = color
     
-frame_izq = tk.Frame(ventana,bg="black",highlightthickness=0,borderwidth=0)
-frame_izq.pack(side=tk.LEFT,fill=tk.Y,expand=False)
-frame_izq.grid_rowconfigure(0, weight=1)
-frame_izq.grid_rowconfigure(2, weight=1)
-frame_der = tk.Frame(ventana,bg="black",highlightthickness=0,borderwidth=0)
-frame_der.pack(side=tk.RIGHT,fill=tk.Y,expand=False)
-frame_der.grid_rowconfigure(0, weight=1)
-frame_der.grid_rowconfigure(2, weight=1)
+    def on_leave(event,color_original):
+        event.widget['background'] = color_original
 
+    ventana_popup = tk.Toplevel(ventana)
+    ventana_popup.title("Exportar Resultados")
+    ventana_popup.configure(bg="#2c2f33")
+    ventana_popup.resizable(False, False)
+
+    centra_ventana(ventana_popup, ancho=400, alto=220)
+
+    label = tk.Label(ventana_popup, text="Selecciona el formato de exportación:",
+                     bg="#2c2f33", fg="white", font=("Arial", 14))
+    label.pack(pady=20)
+
+    frame_botones = tk.Frame(ventana_popup, bg="#2c2f33")
+    frame_botones.pack(pady=10)
+
+    color_csv= "#2196F3"
+    color_csv_hover = "#1769aa"
+    btn_csv = tk.Button(frame_botones, text="CSV", bg=color_csv, fg="white",
+                        font=("Arial", 12, "bold"), width=10,
+                        command=lambda: exportar("csv"))
+    btn_csv.pack(side=tk.LEFT, padx=10)
+    btn_csv.bind("<Enter>",lambda e: on_enter(e, color_csv_hover))
+    btn_csv.bind("<Leave>",lambda e: on_leave(e, color_csv))
+
+    color_json="#FF9800"
+    color_json_hover="#e67c00"
+    btn_json = tk.Button(frame_botones, text="JSON", bg=color_json, fg="darkblue",
+                         font=("Arial", 12, "bold"), width=10,
+                         command=lambda: exportar("json"))
+    btn_json.pack(side=tk.LEFT, padx=10)
+    btn_json.bind("<Enter>",lambda e: on_enter(e,color_json_hover))
+    btn_json.bind("<Leave>",lambda e: on_leave(e,color_json))
+
+    color_cancelar= "#f44336"
+    color_cancelar_hover="#d32f2f"
+    btn_cancelar = tk.Button(ventana_popup, text="Cancelar", bg=color_cancelar, fg="white",
+                              font=("Arial", 12, "bold"), width=15, command=cancelar)
+    btn_cancelar.pack(pady=15)
+    btn_cancelar.bind("<Enter>",lambda e: on_enter(e, color_cancelar_hover))
+    btn_cancelar.bind("<Leave>",lambda e: on_leave(e, color_cancelar))
+
+    ventana_popup.bind("<Return>", lambda e: exportar("csv"))  # Enter por defecto exporta CSV
+
+    ventana_popup.transient(ventana)
+    ventana_popup.grab_set()
+    ventana.wait_window(ventana_popup)
+
+# -------- FUNCIONES PARA BORDES --------
+def resaltar_boton_activo(btn, color):
+    global boton_activo
+    for b in botones:
+        b.itemconfig(b.octagono_id, outline=b.borde_color, width=3)
+        b.activo = False
+    btn.itemconfig(btn.octagono_id, outline=color, width=5)
+    btn.activo = True
+    boton_activo = btn
+        
+def crear_boton_octagonal(parent, text, command=None,bg="black", fg="lightblue",
+    border_color="black",active_color="cyan",width=None, height=None, padx=20, pady=10):
+
+    fuente = tkfont.Font(family="Bauhaus 93", size=18, weight="bold")
+    text_width = fuente.measure(text)
+    text_height = fuente.metrics("linespace")
+
+    # Si no hay width/height definidos, calcular con padding
+    if width is None:
+        width = text_width + padx * 2
+    if height is None:
+        height = text_height + pady * 2
+
+    offset = min(20, width // 6, height // 6)  # ajuste dinámico del corte
+    canvas = tk.Canvas(parent, width=width, height=height, bg=bg, highlightthickness=0)
+
+    # Puntos del octágono (basados en width y height)
+    points = [
+        offset, 0,
+        width - offset, 0,
+        width, offset,
+        width, height - offset,
+        width - offset, height,
+        offset, height,
+        0, height - offset,
+        0, offset
+    ]
+
+    polygon = canvas.create_polygon(points, outline=border_color, fill=bg, width=2)
+
+    # Texto centrado
+    canvas.create_text(width // 2, height // 2, text=text, fill=fg, font=fuente)
+
+    # Hover
+    def on_enter(event):
+        canvas.itemconfig(polygon, outline=active_color, width=4)
+    def on_leave(event):
+        canvas.itemconfig(polygon, outline=border_color, width=2)
+    def on_click(event):
+        if command:
+            command()
+
+    canvas.bind("<Enter>", on_enter)
+    canvas.bind("<Leave>", on_leave)
+    canvas.bind("<Button-1>", on_click)
+
+    return canvas
+
+def actualizar_texto_octagonal(canvas, texto, fg="orange",
+                               font=("Bookman Old Style", 18)):
+    # Elimina texto previo
+    canvas.delete("texto_resultado")
+
+    # Dibuja nuevo texto centrado dentro del canvas
+    canvas.create_text(canvas.winfo_width()//2,
+                       canvas.winfo_height()//2,
+                       text=texto, fill=fg, font=font,
+                       width=canvas.winfo_width()-80,  # ajuste para que el texto no se salga
+                       tags="texto_resultado", anchor="center", justify="center")
+
+# -------- SALIDA OCTOGONAL --------
+def crear_texto_octagonal(parent, width=600, height=200,
+                          border_color="orange", borde_ancho=4,
+                          bg_octagono="black", fg="orange",
+                          font=("Bookman Old Style", 18)):
+
+    # Crear Canvas
+    canvas = tk.Canvas(parent, width=width, height=height,
+                       bg=bg_octagono, highlightthickness=0, bd=0)
+
+    # Calcular puntos del octágono
+    offset = min(40, width // 6, height // 6)
+    points = [
+        offset, 0,
+        width - offset, 0,
+        width, offset,
+        width, height - offset,
+        width - offset, height,
+        offset, height,
+        0, height - offset,
+        0, offset
+    ]
+
+    # Dibujar octágono
+    canvas.create_polygon(points, outline=border_color,
+                          fill=bg_octagono, width=borde_ancho)
+
+    # Retornar el canvas
+    return canvas
+
+#CREAR FRAME OCTOGONAL
+def crear_frame_octagonal(parent, bg="black", border_color="cyan", borde_ancho=4):
+    # Canvas expansible
+    canvas = tk.Canvas(parent, bg=bg, highlightthickness=0, bd=0)
+    canvas.pack(fill="both", expand=True)
+
+    # Frame interno donde va el grafo
+    frame_interno = tk.Frame(canvas, bg=bg)
+    frame_window = canvas.create_window(0, 0, window=frame_interno, anchor="nw")
+
+    def redibujar_octagono(event=None):
+        canvas.delete("borde")  # borrar borde anterior
+
+        w = canvas.winfo_width()
+        h = canvas.winfo_height()
+        offset = min(40, w // 6, h // 6)
+
+        points = [
+            offset, 0,
+            w - offset, 0,
+            w, offset,
+            w, h - offset,
+            w - offset, h,
+            offset, h,
+            0, h - offset,
+            0, offset
+        ]
+
+        canvas.create_polygon(points, outline=border_color, fill=bg,
+                              width=borde_ancho, tags="borde")
+        # Mantener centrado el frame interno
+        canvas.coords(frame_window, w//2, h//2)
+        canvas.itemconfig(frame_window, anchor="center")
+
+    # Llamar redibujar al inicio y cuando cambie el tamaño
+    canvas.bind("<Configure>", redibujar_octagono)
+
+    return canvas, frame_interno
+
+# ---------------- VENTANA PRINCIPAL ----------------
+ventana = tk.Tk()
+ventana.title("ANÁLISIS DE CONECTIVIDAD DE LA RED DE SERVIDORES")
+ventana.state("zoomed")
+ventana.configure(bg="black")
+
+# ---------------- ESTILOS TTK ----------------
+style = ttk.Style()
+style.theme_use("clam")
+
+style.configure("TButton",font=("Bauhaus 93", 18, "bold"),padding=(40,30),
+                background="black",foreground="lightblue",borderwidth=2,
+                focusthickness=3,focuscolor="none",relief="flat")
+style.map("TButton",
+          background=[("active", "gray20")],
+          relief=[("pressed", "groove"), ("!pressed", "flat")])
+
+# Estilos con solo borde coloreado
+style.configure("Blue.TButton", bordercolor="blue", focusthickness=4)
+style.configure("Red.TButton", bordercolor="red", focusthickness=4)
+style.configure("Yellow.TButton", bordercolor="yellow", focusthickness=4)
+style.configure("Green.TButton", bordercolor="green", focusthickness=4)
+style.configure("Hover.TButton", bordercolor="cyan", focusthickness=3)
+
+# ---------------- FRAMES ----------------
+frame_izq = tk.Frame(ventana, bg="black")
+frame_izq.pack(side=tk.LEFT, fill=tk.Y, expand=False,padx=30)
 conten_izq = tk.Frame(frame_izq, bg="black")
-conten_izq.grid(row=1, column=0)
+conten_izq.pack(expand=True)
+
+frame_der = tk.Frame(ventana, bg="black")
+frame_der.pack(side=tk.RIGHT, fill=tk.Y, expand=False,padx=30)
 conten_der = tk.Frame(frame_der, bg="black")
-conten_der.grid(row=1, column=0)
+conten_der.pack(expand=True)
+
+# ---------------- BOTONES ----------------
+# === BOTONES IZQUIERDA ===
+btn_dfs = crear_boton_octagonal(conten_izq, text="Recorrer RED",command=mostrar_dfs,
+    width=400, height=100,bg="black", fg="lightblue",border_color="black", active_color="blue")
+
+btn_bfs = crear_boton_octagonal(conten_izq, text="Calcular distancias mínimas",command=mostrar_bfs,
+    width=400, height=100,bg="black", fg="lightblue",border_color="black", active_color="red")
+
+btn_kruskal = crear_boton_octagonal(conten_izq, text="Árbol de Expansión mínima",command=mostrar_kruskal,
+    width=400, height=100,bg="black", fg="lightblue",border_color="black", active_color="yellow")
+
+btn_prim = crear_boton_octagonal(conten_izq, text="Comparar con Prim",command=mostrar_prim,
+    width=400, height=100,bg="black", fg="lightblue",border_color="black", active_color="green")
+
+# === BOTONES DERECHA ===
+btn_exportar = crear_boton_octagonal(conten_der, text="Exportar Resultados",command=exportar_texto_actual,
+    width=400, height=100,bg="black", fg="lightblue",border_color="black", active_color="blue")
+
+btn_eliminar = crear_boton_octagonal(conten_der, text="Eliminar Nodo",command=elimina_nodo,
+    width=400, height=100,bg="black", fg="lightblue",border_color="black", active_color="red")
+
+btn_salida = crear_boton_octagonal(conten_der, text="EXIT",command=saliPprograma,
+    width=400, height=100,bg="black", fg="lightblue",border_color="black", active_color="red")
 
 
-btn_dfs = tk.Button(
-    conten_izq, text="Recorrer RED",
-    relief="solid",bd=2,
-    highlightthickness=0,highlightbackground="black",
-    command=lambda: [mostrar_dfs(),resaltar_boton_activo(btn_dfs,"blue")], 
-    width=30,height=3, bg="black",fg="lightblue",
-    font=("Bauhaus 93",18,"bold"))
-btn_bfs = tk.Button(
-    conten_izq, text="Calcular distancia minimas",
-    relief="solid",bd=2,
-    command=lambda: [mostrar_bfs(),resaltar_boton_activo(btn_bfs,"red")], 
-    width=30,height=3, bg="black",fg="lightblue",    font=("Bauhaus 93",18,"bold"),
-    highlightthickness=0,highlightbackground="black")
-btn_kruskal = tk.Button(
-    conten_izq, text="Árbol de Expansión minima",
-    relief="solid",bd=2,    
-    command=lambda: [mostrar_kruskal(),resaltar_boton_activo(btn_kruskal,"yellow")], 
-    width=30,height=3, bg="black",fg="lightblue",    
-    font=("Bauhaus 93",18,"bold"),
-    highlightthickness=0,highlightbackground="black")
-btn_prim = tk.Button(
-    conten_izq, text="Comparar con Prim",
-    relief="solid",bd=2,
-    command=lambda: [mostrar_prim(),resaltar_boton_activo(btn_prim,"green")],
-    width=30,height=3,bg="black",fg="lightblue",
-    font=("Bauhaus 93",18,"bold"),
-    highlightthickness=0,highlightbackground="black")
-btn_salida = tk.Button(
-    conten_der, text="EXIT",
-    relief="solid",bd=2,
-    command=saliPprograma,
-    width=30,height=3, bg="black",fg="lightblue",   font=("Bauhaus 93",18,"bold"),
-    highlightthickness=0,highlightbackground="black")
-btn_eliminar = tk.Button(
-    conten_der, text="Eliminar Nodo",
-    relief="solid",bd=2,
-    command=elimina_nodo,
-    width=30,height=3,bg="black",fg="lightblue",
-    font=("Bauhaus 93",18,"bold"),
-    highlightthickness=0,highlightbackground="black")
-btn_exportar = tk.Button(
-    conten_der, text="Exportar Resultados",
-    relief="solid",bd=2,
-    command=lambda: [exportar_texto_actual(),resaltar_boton_activo(btn_dfs,"blue")], 
-    width=30,height=3,bg="black",fg="lightblue",
-    font=("Bauhaus 93",18,"bold"),
-    highlightthickness=0,highlightbackground="black")
+# Empaquetar y centrar
+for b in [btn_dfs, btn_bfs, btn_kruskal, btn_prim]:
+    b.pack(pady=7)
 
-btn_dfs.pack(pady=0)
-btn_bfs.pack(pady=0)
-btn_kruskal.pack(pady=0)
-btn_exportar.pack(pady=0)
-btn_eliminar.pack(pady=0)
-btn_prim.pack(pady=0)
-btn_salida.pack(pady=0)
+for b in [btn_exportar, btn_eliminar, btn_salida]:
+    b.pack(pady=7)
 
-botones=[btn_dfs,btn_bfs,btn_kruskal,btn_prim,btn_eliminar,btn_exportar,btn_salida]
+botones = [btn_dfs, btn_bfs, btn_kruskal, btn_prim, btn_exportar, btn_eliminar, btn_salida]
 
-for btn in botones:
-    btn.bind("<Enter>", resaltar_borde)
-    btn.bind("<Leave>", quitar_resaltado)
+# ---------------- AREA DE SALIDA OCTOGONAL ----------------
+# Crear área octagonal
+salida_canvas = crear_texto_octagonal(
+    ventana, width=900, height=250,
+    border_color="orange", borde_ancho=6,
+    bg_octagono="black", fg="orange"
+)
+salida_canvas.pack(pady=10)
 
-salida_texto = tk.Text(
-    ventana, wrap="word", height=5, width=70, state="disabled", 
-    font=("Bookman Old Style",18),bg="gray25",fg="darkblue",
-    relief="flat", borderwidth=2)
-salida_texto.pack(pady=10)
-
-p_frame = tk.Frame(ventana, bg="black",highlightthickness=0,borderwidth=0)
-p_frame.pack(fill="both", expand=True)
+# -------- FRAME PARA GRAFOS --------
+p_canvas, p_frame = crear_frame_octagonal(
+    ventana, bg="black", border_color="cyan", borde_ancho=4
+)
+p_canvas.pack(pady=20, expand=True, fill="both")
 
 ventana.mainloop()

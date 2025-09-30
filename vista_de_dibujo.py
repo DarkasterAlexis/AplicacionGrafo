@@ -3,18 +3,25 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 def dibujar_grafo(p_frame, grafo, camino=None, mst=None, titulo="Grafo de Servidores"):
-    fig, ax = plt.subplots(figsize=(5,4))
+    for widget in p_frame.winfo_children():
+        widget.destroy()
+    
+    ancho = p_frame.winfo_width() or 800
+    alto = p_frame.winfo_height() or 800
+    
+    figw, figh = ancho/100, alto/100
+    fig, ax = plt.subplots(figsize=(figw,figh))
     fig.patch.set_facecolor("black")
     ax.set_facecolor("skyblue")
-    
     G = nx.Graph()
+    
     for u in grafo:
         for v, w in grafo[u].items():
             G.add_edge(u, v, weight=w)
 
     pos = nx.spring_layout(G, seed=42)
 
-    nx.draw_networkx_nodes(G, pos, node_size=600, node_color="lightsteelblue", ax=ax)
+    nx.draw_networkx_nodes(G, pos, node_size=600, node_color="yellow", ax=ax)
     nx.draw_networkx_labels(G, pos, font_size=12, font_weight="bold", ax=ax)
     nx.draw_networkx_edges(G, pos, edge_color="dimgray", ax=ax)
     labels = nx.get_edge_attributes(G, "weight")
