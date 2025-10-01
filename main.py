@@ -1,9 +1,9 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk,filedialog,simpledialog,messagebox
 from algoritmos import dfs, bfs, kruskal, prim
+import copy
 from cod_grafo import grafo_server
-from vista_de_dibujo import dibujar_grafo
-from tkinter import filedialog,simpledialog
+from vista_de_dibujo import dibujar_grafo 
 import csv, json
 from tkinter import font as tkfont
 import os
@@ -16,7 +16,11 @@ pygame.mixer.init()
 sonido_hover = pygame.mixer.Sound("sounds/hover.wav")
 sonido_click = pygame.mixer.Sound("sounds/click.wav")
 
+#Copia del grafo original yy estructura del historial
+grafo_original = copy.deepcopy(grafo_server)
+
 # ---------------- GLOBALS ----------------
+historial = []
 botones = []
 boton_activo = None
 ultimo_resultado = {}
@@ -154,7 +158,7 @@ def elimina_nodo():
     entry = tk.Entry(ventana_popup, font=("Arial", 14), width=20)
     entry.pack(pady=10)
     entry.focus_set()
-
+    historial.append(copy.deepcopy(grafo_server))
     frame_botones = tk.Frame(ventana_popup, bg="#2c2f33")
     frame_botones.pack(pady=10)
 
@@ -171,7 +175,6 @@ def elimina_nodo():
     ventana_popup.transient(ventana)  # Para que la ventana sea modal
     ventana_popup.grab_set()
     ventana.wait_window(ventana_popup)
-
 
 def exportar_texto_actual():
     if not ultimo_resultado:
@@ -254,6 +257,26 @@ def exportar_texto_actual():
     ventana_popup.transient(ventana)
     ventana_popup.grab_set()
     ventana.wait_window(ventana_popup)
+    
+def actualizar_canvas():
+    """Redibuja el grafo en el área p_frame"""
+    dibujar_grafo(p_frame, grafo_server, titulo="Grafo Actualizado")
+
+def reiniciar_grafo():
+    global grafo_server, historial
+    grafo_server = copy.deepcopy(grafo_original)
+    historial.clear()
+    actualizar_canvas()
+    messagebox.showinfo("Reiniciar", "El grafo ha vuelto a su estado original.")
+
+def retroceder_accion():
+    global grafo_server, historial
+    if historial:
+        grafo_server = historial.pop()
+        actualizar_canvas()
+        messagebox.showinfo("Retroceder", "Se deshizo la última acción.")
+    else:
+        messagebox.showwarning("Retroceder", "No hay acciones para deshacer.")
 
 # -------- FUNCIONES PARA BORDES --------
 def resaltar_boton_activo(btn, color):
@@ -384,21 +407,29 @@ def crear_texto_octagonal(parent, width=600, height=200,
 
 #CREAR FRAME OCTOGONAL
 def crear_frame_octagonal(parent, bg="black", border_color="cyan", borde_ancho=4):
-    # Canvas expansible
+    """
+    Crea un Canvas que contiene un frame centrado y dibuja un borde octagonal
+    alrededor (redibuja al cambiar tamaño). Asegura que el octágono quede
+    DETRÁS del frame interno para que el contenido sea visible.
+    Retorna (canvas, frame_interno).
+    """
     canvas = tk.Canvas(parent, bg=bg, highlightthickness=0, bd=0)
-    canvas.pack(fill="both", expand=True)
-
-    # Frame interno donde va el grafo
+    # Frame interno donde irá el grafo
     frame_interno = tk.Frame(canvas, bg=bg)
+    # Crear window; lo posicionaremos luego en el centro
     frame_window = canvas.create_window(0, 0, window=frame_interno, anchor="nw")
 
     def redibujar_octagono(event=None):
-        canvas.delete("borde")  # borrar borde anterior
-
+        # Evitar dibujar cuando el canvas no tiene tamaño real
         w = canvas.winfo_width()
         h = canvas.winfo_height()
-        offset = min(40, w // 6, h // 6)
+        if w <= 10 or h <= 10:
+            return
 
+        # Borrar borde anterior y crear nuevo
+        canvas.delete("borde")
+
+        offset = min(40, max(6, w // 6), max(6, h // 6))  # ajuste dinámico y seguro
         points = [
             offset, 0,
             w - offset, 0,
@@ -410,14 +441,27 @@ def crear_frame_octagonal(parent, bg="black", border_color="cyan", borde_ancho=4
             0, offset
         ]
 
-        canvas.create_polygon(points, outline=border_color, fill=bg,
-                              width=borde_ancho, tags="borde")
-        # Mantener centrado el frame interno
-        canvas.coords(frame_window, w//2, h//2)
+        # Dibujar el octágono; lo creamos con tag "borde"
+        canvas.create_polygon(points, outline=border_color, fill=bg, width=borde_ancho, tags="borde")
+
+        # Asegurarnos de que el borde quede DETRÁS de la ventana (frame_interno)
+        try:
+            canvas.tag_lower("borde", frame_window)
+        except Exception:
+            # Si falla, al menos bajar la etiqueta 'borde' a fondo
+            canvas.tag_lower("borde")
+
+        # Centrar el frame interno dentro del canvas
+        canvas.coords(frame_window, w // 2, h // 2)
         canvas.itemconfig(frame_window, anchor="center")
 
-    # Llamar redibujar al inicio y cuando cambie el tamaño
+    # Redibujar en cada cambio de tamaño
     canvas.bind("<Configure>", redibujar_octagono)
+
+    # Forzar un primer redibujado una vez que el widget tenga tamaño
+    # (ayuda si el canvas se crea con tamaño 1x1 inicialmente)
+    canvas.update_idletasks()
+    redibujar_octagono()
 
     return canvas, frame_interno
 
@@ -446,10 +490,27 @@ style.configure("Green.TButton", bordercolor="green", focusthickness=4)
 style.configure("Hover.TButton", bordercolor="cyan", focusthickness=3)
 
 # ---------------- FRAMES ----------------
+frame_superior = tk.Frame(ventana, bg="black")
+frame_superior.pack(pady=2)
+
+
+frame_izq_sup = tk.Frame(frame_superior, bg="black")
+frame_izq_sup.pack(side=tk.LEFT, padx=30)
+conten_izq_sup = tk.Frame(frame_izq_sup, bg="black")
+conten_izq_sup.pack(expand=True)
+
 frame_izq = tk.Frame(ventana, bg="black")
 frame_izq.pack(side=tk.LEFT, fill=tk.Y, expand=False,padx=30)
 conten_izq = tk.Frame(frame_izq, bg="black")
 conten_izq.pack(expand=True)
+
+frame_centro_sal = tk.Frame(frame_superior,bg="black")
+frame_centro_sal.pack(side=tk.LEFT)
+
+frame_der_sup = tk.Frame(frame_superior, bg="black")
+frame_der_sup.pack(side=tk.RIGHT, padx=30)
+conten_der_sup = tk.Frame(frame_der_sup, bg="black")
+conten_der_sup.pack(expand=True)
 
 frame_der = tk.Frame(ventana, bg="black")
 frame_der.pack(side=tk.RIGHT, fill=tk.Y, expand=False,padx=30)
@@ -458,6 +519,9 @@ conten_der.pack(expand=True)
 
 # ---------------- BOTONES ----------------
 # === BOTONES IZQUIERDA ===
+btn_retroceder = crear_boton_octagonal(conten_izq_sup, text="⮌ Deshacer Acción",command=retroceder_accion,
+    width=400, height=100,bg="black", fg="lightblue",border_color="black", active_color="orange")
+
 btn_dfs = crear_boton_octagonal(conten_izq, text="Recorrer RED",command=mostrar_dfs,
     width=400, height=100,bg="black", fg="lightblue",border_color="black", active_color="blue")
 
@@ -471,6 +535,9 @@ btn_prim = crear_boton_octagonal(conten_izq, text="Comparar con Prim",command=mo
     width=400, height=100,bg="black", fg="lightblue",border_color="black", active_color="green")
 
 # === BOTONES DERECHA ===
+btn_reiniciar = crear_boton_octagonal(conten_der_sup, text="Reiniciar Grafo ↺",command=reiniciar_grafo,
+    width=400, height=100,bg="black", fg="lightblue",border_color="black", active_color="yellow")
+
 btn_exportar = crear_boton_octagonal(conten_der, text="Exportar Resultados",command=exportar_texto_actual,
     width=400, height=100,bg="black", fg="lightblue",border_color="black", active_color="blue")
 
@@ -480,20 +547,19 @@ btn_eliminar = crear_boton_octagonal(conten_der, text="Eliminar Nodo",command=el
 btn_salida = crear_boton_octagonal(conten_der, text="EXIT",command=saliPprograma,
     width=400, height=100,bg="black", fg="lightblue",border_color="black", active_color="red")
 
-
 # Empaquetar y centrar
-for b in [btn_dfs, btn_bfs, btn_kruskal, btn_prim]:
+for b in [btn_dfs, btn_bfs, btn_kruskal, btn_prim,btn_retroceder]:
     b.pack(pady=7)
 
-for b in [btn_exportar, btn_eliminar, btn_salida]:
+for b in [btn_exportar, btn_eliminar, btn_salida,btn_reiniciar]:
     b.pack(pady=7)
 
-botones = [btn_dfs, btn_bfs, btn_kruskal, btn_prim, btn_exportar, btn_eliminar, btn_salida]
+botones = [btn_dfs, btn_bfs, btn_kruskal, btn_prim, btn_exportar, btn_eliminar, btn_salida,btn_retroceder,btn_reiniciar]
 
 # ---------------- AREA DE SALIDA OCTOGONAL ----------------
 # Crear área octagonal
 salida_canvas = crear_texto_octagonal(
-    ventana, width=900, height=220,
+    frame_centro_sal, width=900, height=220,
     border_color="orange", borde_ancho=6,
     bg_octagono="black", fg="orange"
 )
@@ -504,5 +570,6 @@ p_canvas, p_frame = crear_frame_octagonal(
     ventana, bg="black", border_color="cyan", borde_ancho=4
 )
 p_canvas.pack(pady=20, expand=True, fill="both")
+
 
 ventana.mainloop()
